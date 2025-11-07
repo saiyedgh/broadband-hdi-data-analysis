@@ -1,0 +1,94 @@
+library(tidyverse) # includes dplyr (re-exports `%>%`), tibble, ggplot2, tidyr, etc.
+library(janitor)
+library(skimr)
+library(broom)
+library(car)
+library(lmtest)
+
+#load the files
+hdi <- read.csv("hdi_human_development_index.csv")
+broadband <- read.csv("broadband_subscribers_per_100_people.csv")
+
+glimpse(hdi)
+glimpse(broadband)
+
+#changing the columns in broadband to dbl and treat missing values as NA
+broadband <- broadband %>%
+  mutate(across(c("X2003","X2004","X2005","X2006","X2010","X2011"),
+                as.numeric))
+#removing the chr "X" from the year name
+names(broadband) <- gsub("^X","",names(broadband))
+names(hdi) <- gsub("^X","",names(hdi))
+
+#create a long table for easy analysis
+broadband_long <- broadband %>%
+  pivot_longer(cols=-country, names_to="year", values_to="broadband") %>%
+  mutate(year=as.numeric(year))
+hdi_long <- hdi %>%
+  pivot_longer(cols=-country, names_to="year", values_to="hdi") %>%
+  mutate(year=as.numeric(year))
+
+#Join the data by year and country
+merged_data <- merge(broadband_long, hdi_long, by = c("country","year"))
+
+#remove the missing values
+merged_data <- na.omit(merged_data)
+
+#visualize the relationship between broadband subscription and HDI over the time
+ggplot(merged_data, aes(x = broadband, y = hdi)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_smooth(method = "lm", color = "darkred") +
+  theme_minimal() +
+  labs(title = "Relationship between Broadband Subscriptions and HDI",
+       x = "Broadband subscriptions per 100 people",
+       y = "Human Development Index")
+
+#Looking at the first research question 
+#What is the relationship between HDI and broadband subscriptions, based on the latest available data, which is 2023.
+
+#Pull the data for 2023 only
+data_2023 <- merged_data %>% filter(year==2023)
+
+#Test the skewness and distribution of the data
+#Histogram of HDI in 2023. Histogram show that the HDI of 2023 is left skewed
+ggplot(data_2023,aes(x=hdi))+
+  geom_histogram(colour="white", fill="steelblue")+
+  labs(title="Histogram of HDI in 2023",
+       x = "HDI",
+       y = "Frequency")
+# Box plot of HDI in 2023
+ggplot(data_2023, aes(y=hdi)) + 
+  geom_boxplot() + 
+  labs(title = "Box plot of HDI in 2023",
+       y="Count")
+
+#Histogram of broadband in 2023. Histogram show that the broadband data is right skewed
+ggplot(data_2023,aes(x=broadband))+
+  geom_histogram(colour="white", fill="steelblue")+
+  labs(title="Histogram of Broadband in 2023",
+       x = "Broadband",
+       y = "Frequency")
+# Box plot of broadband in 2023
+ggplot(data_2023, aes(y=broadband)) + 
+  geom_boxplot() + 
+  labs(title = "Box plot of Broadband in 2023",
+       y="Count")
+
+#Need to transform the dataset
+data_2023 <- data_2023 %>%
+  mutate(log_broadband = log(broadband))
+
+#Create a scatter plot of log broadband vs log hdi of 2023
+ggplot(data_2023, aes(x = log_broadband, y = hdi)) +
+  geom_point(color = "steelblue") +                                               # Add scatter points
+  geom_smooth(method = "lm", color = "darkred", linetype = "solid") + # Adds a linear regression line
+  labs(title = "Scatter Plot with Line of Best Fit of Log Broadband vs HDI",
+       x = "Log Broadband Subscription per 100",
+       y = "HDI")
+
+#Create a model
+m1 <- lm(hdi ~ log_broadband, data=data_2023)
+summary(m1)
+
+
+
