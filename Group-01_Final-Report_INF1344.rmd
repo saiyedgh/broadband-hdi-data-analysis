@@ -8,9 +8,11 @@ library(lmtest)
 #load the files
 hdi <- read.csv("hdi_human_development_index.csv")
 broadband <- read.csv("broadband_subscribers_per_100_people.csv")
+gdp <- read.csv("gdp_pcap.csv")
 
 glimpse(hdi)
 glimpse(broadband)
+glimpse(gdp)
 
 #changing the columns in broadband to dbl and treat missing values as NA
 broadband <- broadband %>%
@@ -34,6 +36,7 @@ merged_data <- merge(broadband_long, hdi_long, by = c("country","year"))
 #remove the missing values
 merged_data <- na.omit(merged_data)
 
+merged_data
 #visualize the relationship between broadband subscription and HDI over the time
 ggplot(merged_data, aes(x = broadband, y = hdi)) +
   geom_point(alpha = 0.6, color = "steelblue") +
@@ -48,6 +51,7 @@ ggplot(merged_data, aes(x = broadband, y = hdi)) +
 
 #Pull the data for 2023 only
 data_2023 <- merged_data %>% filter(year==2023)
+data_2023
 
 #Test the skewness and distribution of the data
 #Histogram of HDI in 2023. Histogram show that the HDI of 2023 is left skewed
@@ -76,7 +80,10 @@ ggplot(data_2023, aes(y=broadband)) +
 
 #Need to transform the dataset
 data_2023 <- data_2023 %>%
+  filter(broadband != 0) %>% #remove all countries with 0 in their broadband subscription out of the dataset, because we can't take a log of it
   mutate(log_broadband = log(broadband))
+  
+data_2023
 
 #Create a scatter plot of log broadband vs log hdi of 2023
 ggplot(data_2023, aes(x = log_broadband, y = hdi)) +
@@ -89,6 +96,3 @@ ggplot(data_2023, aes(x = log_broadband, y = hdi)) +
 #Create a model
 m1 <- lm(hdi ~ log_broadband, data=data_2023)
 summary(m1)
-
-
-
