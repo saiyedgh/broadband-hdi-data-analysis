@@ -147,6 +147,7 @@ ggplot(merged_data, aes(x = broadband, y = hdi)) +
 ``` {r message=FALSE, warning=FALSE}
 #Pull the data for 2023 only
 data_2023 <- merged_data %>% filter(year==2023)
+
 ```
 
 ``` {r message=FALSE, warning=FALSE}
@@ -182,8 +183,8 @@ ggplot(data_2023,aes(x=broadband))+
 # Box plot of broadband in 2023
 ggplot(data_2023, aes(y=broadband)) + 
   geom_boxplot() + 
-  labs(title = "Box plot of Broadband in 2023",
-       y="Count")
+  labs(title = "Broadband Subscribers per 100 people, in 2023",
+       y="Subscribers per 100 people")
 ```
 
 ``` {r message=FALSE, warning=FALSE}
@@ -209,5 +210,30 @@ ggplot(data_2023, aes(x = log_broadband, y = hdi)) +
 m1 <- lm(hdi ~ log_broadband, data=data_2023)
 summary(m1)
 ```
+### Check the assumptions
+We need to test our model against the assumptions for multiple linear regression
+1. Linearity
+2. Lack of Multicollinearity
+3. Independence
+4. Normality of residuals
+5. Homoscedascity 
 
 
+
+
+## Comparison since UN declaration
+```{r}
+# Reduce the dataframe to the years of interest
+df_before_after <- merged_data %>% filter(year==2011|year==2023) 
+glimpse(df_before_after) 
+
+# Get a list of all of the years in the HDI dataset
+ggplot(df_before_after, aes(y=broadband)) +
+geom_boxplot() +
+    facet_wrap(~year, scales = 'fixed') # Gives the plots the same scales
+
+# Conducting a t-test to confirm that the number of subscribers is sigificantly different
+t.test(data_2011$broadband, data_2023$broadband)
+
+
+```
