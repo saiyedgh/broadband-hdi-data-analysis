@@ -81,14 +81,6 @@ skim(broadband_clean)
 skim(gdp_clean)
 ```
 
-cat("HDI: Number of empty records removed:", sum(is.na(hdi_clean)))
-hdi_clean <- hdi_clean %>% drop_na() 
-cat("Broadband: Number of empty records removed:", sum(is.na(broadband_clean)))
-broadband_clean <- broadband_clean %>% drop_na() 
-cat("GDP: Number of empty records removed:", sum(is.na(gdp_clean)))
-gdp_clean <- gdp_clean %>% drop_na()
-
-
 ``` {r message=FALSE, warning=FALSE}
 #create a long table for easy analysis
 broadband_long <- broadband_clean %>%
