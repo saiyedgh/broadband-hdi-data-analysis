@@ -19,83 +19,14 @@ library(car)
 library(lmtest)
 ```
 
-## Loading the files
-``` {r message=FALSE, warning=FALSE}
-# getwd()
-hdi <- read.csv("data/hdi_human_development_index.csv")
-broadband <- read.csv("data/broadband_subscribers_per_100_people.csv")
+#load the files
+hdi <- read.csv("hdi_human_development_index.csv")
+broadband <- read.csv("broadband_subscribers_per_100_people.csv")
+gdp <- read.csv("gdp_pcap.csv")
 
 glimpse(hdi)
 glimpse(broadband)
-```
-
-## Processing Dataframes
-### Cleaning header names
-``` {r message=FALSE, warning=FALSE}
-hdi_clean <- clean_names(hdi)
-names(hdi_clean) <- gsub("^x", "", names(hdi_clean))
-head(hdi_clean, 1)
-broadband_clean <- clean_names(broadband)
-names(broadband_clean) <- gsub("^x", "", names(broadband_clean))
-head(broadband_clean, 1)
-```
-
-### Checking and removing duplicates
-``` {r message=FALSE, warning=FALSE}
-remove_duplicates <- function(data) {
-  original_rows <- nrow(data)
-  
-  data_noDuplicates <- data %>%
-    distinct()
-  
-  new_rows <- nrow(data_noDuplicates)
-  
-  rows_removed <- original_rows - new_rows
-  print_statement <- paste(rows_removed, "rows removed.")
-  cat(print_statement)
-  
-  return(data_noDuplicates)
-}
-
-hdi_clean <- remove_duplicates(hdi_clean)
-broadband_clean <- remove_duplicates(broadband_clean)
-```
-
-### Handling missing values
-``` {r message=FALSE, warning=FALSE}
-skim(hdi_clean)
-skim(broadband_clean)
-```
-``` {r message=FALSE, warning=FALSE, echo=FALSE, results='hide'}
-cat("HDI: Number of empty records removed:", sum(is.na(hdi_clean)))
-hdi_clean <- hdi_clean %>% drop_na() 
-
-cat("Broadband: Number of empty records removed:", sum(is.na(broadband_clean)))
-broadband_clean <- broadband_clean %>% drop_na() 
-
-```
-```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide'}
-# remove this later
-data <- data.frame(
-  A = c(1, 2, NA, 4),
-  B = c(NA, 2, 3, 4),
-  C = c(1, 2, 3, 4)
-)
-
-print(data)
-cleaned_data <- data %>% drop_na()
-print(cleaned_data)
-```
-
-```{r message=FALSE, warning=FALSE, echo=FALSE, results='hide'}
-#Join the data by year and country
-# merged_data_02 <- merge(broadband_clean, hdi_clean, by = c("country","year"))
-
-#remove the missing values
-# merged_data_02 <- na.omit(merged_data_02)
-```
-
-``` {r message=FALSE, warning=FALSE}
+glimpse(gdp)
 
 #changing the columns in broadband to dbl and treat missing values as NA
 broadband <- broadband %>%
@@ -147,7 +78,6 @@ ggplot(merged_data, aes(x = broadband, y = hdi)) +
 ``` {r message=FALSE, warning=FALSE}
 #Pull the data for 2023 only
 data_2023 <- merged_data %>% filter(year==2023)
-
 ```
 
 ``` {r message=FALSE, warning=FALSE}
@@ -183,17 +113,17 @@ ggplot(data_2023,aes(x=broadband))+
 # Box plot of broadband in 2023
 ggplot(data_2023, aes(y=broadband)) + 
   geom_boxplot() + 
-  labs(title = "Broadband Subscribers per 100 people, in 2023",
-       y="Subscribers per 100 people")
+  labs(title = "Box plot of Broadband in 2023",
+       y="Count")
 ```
 
 ``` {r message=FALSE, warning=FALSE}
 #Need to transform the dataset
 data_2023 <- data_2023 %>%
-  mutate(broadband = ifelse(broadband == 0, NA, broadband)) %>%
+  filter(broadband != 0) %>% #remove all countries with 0 in their broadband subscription out of the dataset, because we can't take a log of it
   mutate(log_broadband = log(broadband))
-```
-
+  
+data_2023
 
 ``` {r message=FALSE, warning=FALSE}
 #Create a scatter plot of log broadband vs log hdi of 2023
@@ -209,31 +139,3 @@ ggplot(data_2023, aes(x = log_broadband, y = hdi)) +
 #Create a model
 m1 <- lm(hdi ~ log_broadband, data=data_2023)
 summary(m1)
-```
-### Check the assumptions
-We need to test our model against the assumptions for multiple linear regression
-1. Linearity
-2. Lack of Multicollinearity
-3. Independence
-4. Normality of residuals
-5. Homoscedascity 
-
-
-
-
-## Comparison since UN declaration
-```{r}
-# Reduce the dataframe to the years of interest
-df_before_after <- merged_data %>% filter(year==2011|year==2023) 
-glimpse(df_before_after) 
-
-# Get a list of all of the years in the HDI dataset
-ggplot(df_before_after, aes(y=broadband)) +
-geom_boxplot() +
-    facet_wrap(~year, scales = 'fixed') # Gives the plots the same scales
-
-# Conducting a t-test to confirm that the number of subscribers is sigificantly different
-t.test(data_2011$broadband, data_2023$broadband)
-
-
-```
