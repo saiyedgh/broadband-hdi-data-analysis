@@ -19,6 +19,7 @@ library(car)
 library(lmtest)
 ```
 
+
 ## Loading the files
 ``` {r message=FALSE, warning=FALSE}
 # getwd()
@@ -29,6 +30,7 @@ gdp <- read.csv("data/gdp_pcap.csv")
 glimpse(hdi)
 glimpse(broadband)
 glimpse(gdp)
+
 ```
 
 ## Processing Dataframes
@@ -37,6 +39,7 @@ glimpse(gdp)
 hdi_clean <- clean_names(hdi)
 names(hdi_clean) <- gsub("^x", "", names(hdi_clean))
 head(hdi_clean, 1)
+
 
 #changing the columns in broadband to dbl and treat missing values as NA
 broadband <- broadband %>%
@@ -80,13 +83,6 @@ skim(hdi_clean)
 skim(broadband_clean)
 skim(gdp_clean)
 ```
-
-cat("HDI: Number of empty records removed:", sum(is.na(hdi_clean)))
-hdi_clean <- hdi_clean %>% drop_na() 
-cat("Broadband: Number of empty records removed:", sum(is.na(broadband_clean)))
-broadband_clean <- broadband_clean %>% drop_na() 
-cat("GDP: Number of empty records removed:", sum(is.na(gdp_clean)))
-gdp_clean <- gdp_clean %>% drop_na()
 
 
 ``` {r message=FALSE, warning=FALSE}
@@ -133,15 +129,6 @@ ggplot(merged_data, aes(x = broadband, y = hdi)) +
 ``` {r message=FALSE, warning=FALSE}
 #Pull the data for 2023 only
 data_2023 <- merged_data %>% filter(year==2023)
-
-#visualize the relationship between broadband subscription and HDI in the year of 2023
-ggplot(data_2023, aes(x = broadband, y = hdi)) +
-  geom_point(alpha = 0.6, color = "steelblue") +
-  geom_smooth(method = "lm", color = "darkred") +
-  theme_minimal() +
-  labs(title = "Relationship between Broadband Subscriptions and HDI in the year 2023",
-       x = "Broadband subscriptions per 100 people",
-       y = "Human Development Index")
 ```
 
 ``` {r message=FALSE, warning=FALSE}
@@ -182,7 +169,7 @@ Need to transform the broadband dataset. Option 1: Log Transform
 ``` {r message=FALSE, warning=FALSE}
 #log transformed the broadband
 data_2023 <- data_2023 %>%
-  mutate(broadband = ifelse(broadband == 0, NA, broadband)) %>%
+  filter(broadband != 0) %>% #remove all countries with 0 in their broadband subscription out of the dataset, because we can't take a log of it
   mutate(log_broadband = log(broadband))
 
 #Testing the skewness of log transform broadband values
