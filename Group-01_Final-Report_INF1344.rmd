@@ -182,7 +182,7 @@ Need to transform the broadband dataset. Option 1: Log Transform
 ``` {r message=FALSE, warning=FALSE}
 #log transformed the broadband
 data_2023 <- data_2023 %>%
-  mutate(broadband = ifelse(broadband == 0, NA, broadband)) %>%
+  filter(broadband != 0) %>% #remove all countries with 0 in their broadband subscription out of the dataset, because we can't take a log of it
   mutate(log_broadband = log(broadband))
 
 #Testing the skewness of log transform broadband values
