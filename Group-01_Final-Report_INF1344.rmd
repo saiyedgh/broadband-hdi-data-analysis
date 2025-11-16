@@ -29,6 +29,7 @@ We are using three files from the Gapminder dataset:HDI< Broadband and GDP.
 
 
 ``` {r message=FALSE, warning=FALSE}
+# TEST COMMENT - DELETE AFTER
 hdi <- read.csv("data/hdi_human_development_index.csv")
 broadband <- read.csv("data/broadband_subscribers_per_100_people.csv")
 gdp <- read.csv("data/gdp_pcap.csv")
