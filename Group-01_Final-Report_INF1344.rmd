@@ -33,11 +33,6 @@ hdi <- read.csv("data/hdi_human_development_index.csv")
 broadband <- read.csv("data/broadband_subscribers_per_100_people.csv")
 gdp <- read.csv("data/gdp_pcap.csv")
 
-#setwd("/Users/ivan/Desktop/Master of Information/")
-#hdi <- read.csv("hdi_human_development_index.csv")
-#broadband <- read.csv("broadband_subscribers_per_100_people.csv")
-#gdp <- read.csv("gdp_pcap.csv")
-
 ```
 
 
