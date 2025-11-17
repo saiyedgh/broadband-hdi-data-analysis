@@ -20,6 +20,7 @@ library(lmtest)
 library(dplyr)
 library(infer)
 library(corrplot)
+library(kableExtra)
 ```
 
 ## Loading the files
@@ -445,7 +446,7 @@ data_2022_standardized <- data_2022_longer %>%
 
 
 # Question 1 
-What is the relationship between HDI and broadband subscriptions, based on the latest available data, which is 2022.
+What is the relationship between HDI and broadband subscriptions, based on the latest available data, which is 2022?
 
 
 ## Descriptives and EDA
@@ -528,6 +529,21 @@ res_model <- residuals(multi_reg)
 shapiro.test(res_model)
 plot(multi_reg, which = 2)
 ```
+## Reporting
+```{r}
+# grabbing the coefficients from the model to report according to APA
+df_stats <- as.data.frame(summary(multi_reg)$coefficients)
+
+# adding the APA names to the table
+names(df_stats) <- c("𝐵", "SE 𝐵", "t", "P")
+
+# adding scientific notation for the P column
+df_stats <- df_stats %>%
+  mutate(P = format(P, scientific = TRUE))
+
+# Making the table look nice using Kable styling
+kbl(df_stats, caption = "Multiple Regression Results", digits=2) %>% kable_styling()
+```
 
 # Question 2
 Are there countries that significantly deviate from this relationship between HDI and broadband subscription rate?
@@ -568,8 +584,11 @@ Our outlier is 2011 is Cuba
 How has broadband access by country changed between 2011, when the UN declaration was announced, and 2022? 
 
 ## Descriptives and EDA
+Let's look at the means and standard deviations of broadband of each year.
 ```{r}
-skim(merged_data)
+skim(data_2011, broadband)
+
+skim(data_2022, broadband)
 ```
 
 ### Plots
@@ -589,7 +608,7 @@ Let's test whether there is significant differences between broadband subscripti
 result <- t.test(data_2022$broadband,data_2011$broadband)
 result
 ```
-We can see from the t-test that we can reject the null hypothesis that broadband adoption is the same between years.  
+
 
 ### Confidence interval
 We will now visualize our confidence interval.
@@ -613,7 +632,21 @@ null_dist %>%
   visualize() +
   shade_ci(endpoints = ci)
 ```
+On average, countries had greater broadband subscription rates in 2022 (M = 16.24, SE=15.23) than in 2011 (M=9.61, SE=11.31).  This difference is significant t = 4.73, p< 0.05.
 
 
+# Question 4 
+To what extent is Internet access (via broadband subscription) a meaningful indicator for human development?
+
+### Correlation matrix
+Let's look at the correlations between broadband subscriptions and HDI. 
+
+```{r fig.width=3, fig.height=3}
+
+cor.test(data_2022_standardized$hdi, data_2022_standardized$broadband)
+
+```
+
+There is a significant relationship between HDI and broadband subscription rate, r=.85, p<.05.
 
 ## References
