@@ -41,6 +41,7 @@ gdp <- read.csv("data/gdp_pcap.csv")
 ### Look at the structure of each of the dataframes
 
 #### Human Development Index (HDI)
+Let's review the structure of the HDI dataframe.
 ```{r}
 str(hdi)
 ```
@@ -48,14 +49,14 @@ We can see that the column names have Xs that aren't helpful.
 The most recent year is 2023.
 
 #### Broadband subscribers (per 100 people)
+Let's review the structure of the broadband subscriber dataframe.
 ```{r}
 str(broadband)
 ```
 Again, the column names have Xs that aren't helpful. Several columns have chr data type, which we will need to clean up. The most recent year is also 2023.
 
 ### Gross Domestic Product (GDP)
-
-Let's inspect the years of interest. (2010-2023)
+Let's inspect the structure of the GDP dataframe for the years of interest (2010-2023).
 ```{r}
 gdp %>% dplyr::select('X2010':'X2023') %>% 
   str()
@@ -126,7 +127,7 @@ hdi_missing_values <- hdi_clean %>%
 # Formatting the printout
 list_transpose(as.list((hdi_missing_values)))
 ```
-Let's look at this row
+Let's look at this row for the missing value
 ```{r}
 hdi_clean %>% filter(is.na(`2022`))
 ```
@@ -177,10 +178,6 @@ gdp_missing_values <- gdp_clean %>%
 # Formatting the printout
 list_transpose(as.list((gdp_missing_values)))
 ```
-We could pick any year.
-
-The model should use the z-scores rather than the values of the predictors because they all were measured using different scales. (Field,2012)
-
 ### Reshape the data
 ``` {r message=FALSE, warning=FALSE}
 #create a long table for easy analysis
@@ -399,6 +396,8 @@ qqline(data_2022$log_gdp, col = "steelblue", lwd = 2)
 ```
 
 ### Standardization
+The model should use the z-scores rather than the values of the predictors because they all were measured using different scales. (Field,2012)
+
 To calculate z-scores, we need the mean and standard deviations. These values are joined to our long format table  
 ```{r}
 
@@ -502,16 +501,23 @@ The variance inflation factors are 4.01 for sqrt_broadband and 4.01 for log_gdp.
 ```{r}
 dwtest(multi_reg)
 ```
-?? 
+??? Not sure here - While we failed to reject the null hypothesis that autocorrelation is greater than zero, as the value is not less than 1 or greater than 3, we are less concerned about autocorrelation.
 
 ### Normaility of residuals
 ```{r}
-plot(multi_reg, which = 1)
+res_model <- residuals(multi_reg)
+shapiro.test(res_model)
 
 res_model <- residuals(multi_reg)
 shapiro.test(res_model)
 plot(multi_reg, which = 2)
 
+```
+The residuals are fairly normal in the first quantile.
+
+#### Homoscedascity
+Next, let's look for the independence of the residuals.
+```{r}
 pred_model <- fitted(multi_reg)
 plot(pred_model, res_model,
      xlab = "Predicted Values (Fitted)",
@@ -521,14 +527,8 @@ plot(pred_model, res_model,
 abline(h = 0, col = "red", lwd = 2)
 
 ```
+The residuals do not cluster evenly. There is some heteroscedascity.
 
-#### Homoscedascity
-Next, let's look for the independence of the residuals.
-```{r}
-res_model <- residuals(multi_reg)
-shapiro.test(res_model)
-plot(multi_reg, which = 2)
-```
 ## Reporting
 ```{r}
 # grabbing the coefficients from the model to report according to APA
