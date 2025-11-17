@@ -7,53 +7,90 @@ output:
     toc: true
     toc_depth: '3'
 ---
-<hr>
+
 ## Setup and Packages
 ```{r setup, echo=TRUE, results='hide', message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(tidy=TRUE, tidy.opts=list(width.cutoff=20))
 library(tidyverse)
 library(janitor)
-library(skimr)
 library(broom)
 library(car)
+library(skimr)
 library(lmtest)
+library(dplyr)
+library(infer)
+library(corrplot)
 ```
 
-
 ## Loading the files
+
+## Import & Initial Audit
+We are using three files from the Gapminder dataset:HDI< Broadband and GDP. 
+(https://www.gapminder.org/data/).
+
+
 ``` {r message=FALSE, warning=FALSE}
-# getwd()
 hdi <- read.csv("data/hdi_human_development_index.csv")
 broadband <- read.csv("data/broadband_subscribers_per_100_people.csv")
 gdp <- read.csv("data/gdp_pcap.csv")
 
-glimpse(hdi)
-glimpse(broadband)
-glimpse(gdp)
-
 ```
 
-## Processing Dataframes
+
+### Look at the structure of each of the dataframes
+
+#### Human Development Index (HDI)
+```{r}
+str(hdi)
+```
+We can see that the column names have Xs that aren't helpful.
+The most recent year is 2023.
+
+#### Broadband subscribers (per 100 people)
+```{r}
+str(broadband)
+```
+Again, the column names have Xs that aren't helpful. Several columns have chr data type, which we will need to clean up. The most recent year is also 2023.
+
+### Gross Domestic Product (GDP)
+
+Let's inspect the years of interest. (2010-2023)
+```{r}
+gdp %>% dplyr::select('X2010':'X2023') %>% 
+  str()
+```
+This has the same column naming pattern.
+
 ### Cleaning header names
 ``` {r message=FALSE, warning=FALSE}
 hdi_clean <- clean_names(hdi)
 names(hdi_clean) <- gsub("^x", "", names(hdi_clean))
-head(hdi_clean, 1)
-
 
 #changing the columns in broadband to dbl and treat missing values as NA
 broadband <- broadband %>%
-  mutate(across(c("X2003","X2004","X2005","X2006","X2010","X2011"),
-                as.numeric))
+              mutate(across(c("X2003","X2004","X2005","X2006","X2010","X2011")))
+colnames(hdi_clean)
 
 broadband_clean <- clean_names(broadband)
 names(broadband_clean) <- gsub("^x", "", names(broadband_clean))
-head(broadband_clean, 1)
+colnames(broadband_clean)
 
 gdp_clean <- clean_names(gdp)
 names(gdp_clean) <- gsub("^X","", names(gdp))
-head(gdp_clean,1)
+colnames(gdp_clean)
+
 ```
+
+### Converting to numeric datatypes
+```{r}
+#changing the columns in broadband to dbl and treat missing values as NA
+broadband_clean <- broadband_clean %>%
+  mutate(across(c("2003","2004","2005","2006","2010","2011"),
+                as.numeric))
+```
+
+
+## Data cleaning, shaping
 
 ### Checking and removing duplicates
 ``` {r message=FALSE, warning=FALSE}
@@ -78,27 +115,89 @@ gdp_clean <- remove_duplicates(gdp_clean)
 ```
 
 ### Handling missing values
-``` {r message=FALSE, warning=FALSE}
-skim(hdi_clean)
-skim(broadband_clean)
-skim(gdp_clean)
+
+Let's see if there's missing values for 2011 or 2023 for HDI
+```{r}
+# Summary of all of the NA values for the variables of interest
+hdi_missing_values <- hdi_clean %>%
+  summarise(across(c(`2011`,`2020`,`2021`,`2022`,`2023`), ~ sum(is.na(.))))
+
+# Formatting the printout
+list_transpose(as.list((hdi_missing_values)))
+```
+Let's look at this row
+```{r}
+hdi_clean %>% filter(is.na(`2022`))
+```
+Let's use the value from the previous year as an approximation
+```{r}
+hdi_clean['Central African Republic','2022'] <- hdi_clean['Central African Republic','2021']
+```
+
+cat("HDI: Number of empty records removed:", sum(is.na(hdi_clean)))
+hdi_clean <- hdi_clean %>% drop_na() 
+cat("Broadband: Number of empty records removed:", sum(is.na(broadband_clean)))
+broadband_clean <- broadband_clean %>% drop_na() 
+cat("GDP: Number of empty records removed:", sum(is.na(gdp_clean)))
+gdp_clean <- gdp_clean %>% drop_na()
+
+
+Let's see if there's missing values for 2011 and since 2020 broadband
+```{r}
+# Summary of all of the NA values for the variables of interest
+broadband_missing_values <- broadband_clean %>%
+  summarise(across(c(`2011`,`2020`,`2021`,`2022`,`2023`), ~ sum(is.na(.))))
+
+# Formatting the printout
+list_transpose(as.list((broadband_missing_values)))
+
+```
+49 missing values in 2023 is a lot.
+
+Let's peek at the rows with missing values for 2022
+```{r}
+broadband_clean %>% filter(is.na(`2022`))
+```
+
+For each, let's use the nearest previous year with a value as an approximation
+```{r}
+broadband_clean['Niger','2022'] <- broadband_clean['Niger','2020']
+
+broadband_clean['Sierra Leone','2022'] <- broadband_clean['Sierra Leone','2021']
 ```
 
 
+Let's see if there's missing values for 2011 and since 2020 for GDP
+```{r}
+# Summary of all of the NA values for the variables of interest
+gdp_missing_values <- gdp_clean %>%
+  summarise(across(c(`2011`,`2020`,`2021`,`2022`,`2023`), ~ sum(is.na(.))))
+
+# Formatting the printout
+list_transpose(as.list((gdp_missing_values)))
+```
+We could pick any year.
+
+The model should use the z-scores rather than the values of the predictors because they all were measured using different scales. (Field,2012)
+
+### Reshape the data
 ``` {r message=FALSE, warning=FALSE}
 #create a long table for easy analysis
 broadband_long <- broadband_clean %>%
   pivot_longer(cols=-country, names_to="year", values_to="broadband") %>%
   mutate(year=as.numeric(year))
+
 hdi_long <- hdi_clean %>%
   pivot_longer(cols=-country, names_to="year", values_to="hdi") %>%
   mutate(year=as.numeric(year))
+
 gdp_long <- gdp_clean[-1.] %>%
   rename(country=name) %>%
   pivot_longer(cols=-country, names_to="year", values_to="gdp") %>%
   mutate(year=as.numeric(year))
 ```
 
+### Merge the data
 ``` {r message=FALSE, warning=FALSE}
 #Join the HDI & Broadband data by year and country
 merged_data <- merge(broadband_long, hdi_long, by = c("country","year"))
@@ -110,317 +209,303 @@ merged_data <- merge(merged_data, gdp_long, by = c("country", "year"))
 merged_data <- na.omit(merged_data)
 ```
 
-## Data Visualization
-
+### Skewness
 ``` {r message=FALSE, warning=FALSE}
-#visualize the relationship between broadband subscription and HDI over the time
-ggplot(merged_data, aes(x = broadband, y = hdi)) +
-  geom_point(alpha = 0.6, color = "steelblue") +
-  geom_smooth(method = "lm", color = "darkred") +
-  theme_minimal() +
-  labs(title = "Relationship between Broadband Subscriptions and HDI",
-       x = "Broadband subscriptions per 100 people",
-       y = "Human Development Index")
+#Pull the data for 2022 only
+data_2022 <- merged_data %>% filter(year==2022)
 ```
 
-#Looking at the first research question 
-#What is the relationship between HDI and broadband subscriptions, based on the latest available data, which is 2023.
-
 ``` {r message=FALSE, warning=FALSE}
-#Pull the data for 2023 only
-data_2023 <- merged_data %>% filter(year==2023)
+#Pull the data for 2011 only
+data_2011 <- merged_data %>% filter(year==2011)
 ```
 
+
+#### Distribution of Human Development Index (2022)
 ``` {r message=FALSE, warning=FALSE}
 #Test the skewness and distribution of the data
-#Histogram of HDI in 2023. Histogram show that the HDI of 2023 is mildy left skewed
-ggplot(data_2023,aes(x=hdi))+
+#Histogram of HDI in 2022. Histogram show that the HDI of 2022 is mildy left skewed
+ggplot(data_2022,aes(x=hdi))+
   geom_histogram(colour="white", fill="steelblue")+
-  labs(title="Histogram of HDI in 2023",
+  labs(title="Human Development Indices (HDI) in 2022",
        x = "HDI",
        y = "Frequency")
 ```
 
 ``` {r message=FALSE, warning=FALSE}
-# Box plot of HDI in 2023
-ggplot(data_2023, aes(y=hdi)) + 
+# Box plot of HDI in 2022
+ggplot(data_2022, aes(y=hdi)) + 
   geom_boxplot() + 
-  labs(title = "Box plot of HDI in 2023",
+  labs(title = "Human Development Indices (HDI) in 2022",
        y="Count")
 ```
 
-``` {r message=FALSE, warning=FALSE}
-#Histogram of broadband in 2023. Histogram show that the broadband data is right skewed
-ggplot(data_2023,aes(x=broadband))+
-  geom_histogram(colour="white", fill="steelblue")+
-  labs(title="Histogram of Broadband in 2023",
-       x = "Broadband",
-       y = "Frequency")
-```
-
-``` {r message=FALSE, warning=FALSE}
-# Box plot of broadband in 2023
-ggplot(data_2023, aes(y=broadband)) + 
-  geom_boxplot() + 
-  labs(title = "Box plot of Broadband in 2023",
-       y="Count")
-```
-Need to transform the broadband dataset. Option 1: Log Transform
-``` {r message=FALSE, warning=FALSE}
-#log transformed the broadband
-data_2023 <- data_2023 %>%
-  filter(broadband != 0) %>% #remove all countries with 0 in their broadband subscription out of the dataset, because we can't take a log of it
-  mutate(log_broadband = log(broadband))
-
-#Testing the skewness of log transform broadband values
-ggplot(data_2023,aes(x=log_broadband))+
-  geom_histogram(colour="white", fill="steelblue")+
-  labs(title="Histogram of Log Tranformed Broadband in 2023",
-       x = "Log Transformed Broadband",
-       y = "Frequency")
-
-shapiro.test(data_2023$log_broadband)
-
-qqnorm(data_2023$log_broadband, main = "Q-Q Plot for log transformed broadband", xlab = "Theoretical Quantiles", ylab = "log transformed broadband")
-
-# Add a reference line
-qqline(data_2023$log_broadband, col = "steelblue", lwd = 2)
-```
-Option 2: Square root Transform
-``` {r message=FALSE, warning=FALSE}
-#Square root transform of the broadband dataset. 
-data_2023 <- data_2023 %>%
-  mutate(sqrt_broadband = sqrt(broadband))
-
-#Testing the skewness of log transform broadband values
-ggplot(data_2023,aes(x=sqrt_broadband))+
-  geom_histogram(colour="white", fill="steelblue")+
-  labs(title="Histogram of Square rootTranformed Broadband in 2023",
-       x = "Square root Transformed Broadband",
-       y = "Frequency")
-
-shapiro.test(data_2023$sqrt_broadband)
-
-qqnorm(data_2023$sqrt_broadband, main = "Q-Q Plot for Square root transformed broadband", xlab = "Theoretical Quantiles", ylab = "log transformed broadband")
-
-# Add a reference line
-qqline(data_2023$sqrt_broadband, col = "steelblue", lwd = 2)
-```
-
-``` {r message=FALSE, warning=FALSE}
-#Create a scatter plot of square root broadband vs hdi of 2023
-ggplot(data_2023, aes(x = sqrt_broadband, y = hdi)) +
-  geom_point(color = "steelblue") +                                               # Add scatter points
-  geom_smooth(method = "lm", color = "darkred", linetype = "solid") + # Adds a linear regression line
-  labs(title = "Scatter Plot with Line of Best Fit of Square root Broadband vs HDI",
-       x = "Square root Broadband Subscription per 100",
-       y = "HDI")
-```
-
-``` {r message=FALSE, warning=FALSE}
-#Create a model for 2023 data
-model_2023 <- lm(hdi ~ sqrt_broadband, data=data_2023)
-summary(model_2023)
-```
-
-#We want to do a comparision between 2011 and 2023.
-#In 2011, the United Nations General Assembly highlighed Internet access as a basic human right
-```{r}
-data_2011 <- merged_data %>% filter(year==2011)
-
-#visualize the relationship between broadband subscription and HDI in the year of 2011
-ggplot(data_2011, aes(x = broadband, y = hdi)) +
-  geom_point(alpha = 0.6, color = "steelblue") +
-  geom_smooth(method = "lm", color = "darkred") +
-  theme_minimal() +
-  labs(title = "Relationship between Broadband Subscriptions and HDI in the year 2011",
-       x = "Broadband subscriptions per 100 people",
-       y = "Human Development Index")
-```
-
+#### Distribution of Human Development Index (2011)
 ``` {r message=FALSE, warning=FALSE}
 #Test the skewness and distribution of the data
-#Histogram of HDI in 2011. Histogram show that the HDI of 2011 is mildy left skewed
+#Histogram of HDI in 2011. 
 ggplot(data_2011,aes(x=hdi))+
   geom_histogram(colour="white", fill="steelblue")+
-  labs(title="Histogram of HDI in 2011",
+  labs(title="Human Development Indices (HDI) in 2011",
        x = "HDI",
        y = "Frequency")
 ```
+
+This histogram shows that the HDI of 2011 is mildy left skewed.
 
 ``` {r message=FALSE, warning=FALSE}
 # Box plot of HDI in 2011
 ggplot(data_2011, aes(y=hdi)) + 
   geom_boxplot() + 
-  labs(title = "Box plot of HDI in 2011",
+  labs(title = "Human Development Indices (HDI) in 2011",
        y="Count")
 ```
 
+
+#### Distribution of Broadband (2022)
 ``` {r message=FALSE, warning=FALSE}
-#Histogram of broadband in 2011. Histogram show that the broadband data is severe right skewed
-ggplot(data_2011,aes(x=broadband))+
+#Histogram of broadband in 2022. 
+ggplot(data_2022,aes(x=broadband))+
   geom_histogram(colour="white", fill="steelblue")+
-  labs(title="Histogram of Broadband in 2011",
+  labs(title="Distribution of Broadband in 2022",
        x = "Broadband",
        y = "Frequency")
 ```
 
+The histogram shows that the broadband data is right skewed.
+
 ``` {r message=FALSE, warning=FALSE}
-# Box plot of broadband in 2023
+# Box plot of broadband in 2022
+ggplot(data_2022, aes(y=broadband)) + 
+  geom_boxplot() + 
+  labs(title = "Box plot of Broadband in 2022",
+       y="Count")
+```
+
+We need to transform the broadband dataset. 
+
+#### Distribution of Broadband (2011)
+``` {r message=FALSE, warning=FALSE}
+#Histogram of broadband in 2011. 
+ggplot(data_2022,aes(x=broadband))+
+  geom_histogram(colour="white", fill="steelblue")+
+  labs(title="Distribution of Broadband in 2011",
+       x = "Broadband",
+       y = "Frequency")
+```
+
+The histogram shows that the broadband data is right skewed.
+
+``` {r message=FALSE, warning=FALSE}
+# Box plot of broadband in 2011
 ggplot(data_2011, aes(y=broadband)) + 
   geom_boxplot() + 
   labs(title = "Box plot of Broadband in 2011",
        y="Count")
 ```
-Need to transform the braodband dataset. Option 1: Log Transform
+
+We need to transform the broadband dataset. 
+
+##### Option 1: Log Transform
 ``` {r message=FALSE, warning=FALSE}
-data_2011 <- data_2011 %>%
-  filter(broadband != 0) %>%
+#log transformed the broadband
+data_2022 <- data_2022 %>%
+  filter(broadband != 0) %>% #remove all countries with 0 in their broadband subscription out of the dataset, because we can't take a log of it
   mutate(log_broadband = log(broadband))
 
 #Testing the skewness of log transform broadband values
-ggplot(data_2011,aes(x=log_broadband))+
+ggplot(data_2022,aes(x=log_broadband))+
   geom_histogram(colour="white", fill="steelblue")+
-  labs(title="Histogram of Log Tranformed Broadband in 2011",
+  labs(title="Log Tranformed Broadband in 2022",
        x = "Log Transformed Broadband",
        y = "Frequency")
 
-shapiro.test(data_2011$log_broadband)
+shapiro.test(data_2022$log_broadband)
 
-qqnorm(data_2011$log_broadband, main = "Q-Q Plot for log transformed broadband", xlab = "Theoretical Quantiles", ylab = "log transformed broadband")
+qqnorm(data_2022$log_broadband, main = "Q-Q Plot for log transformed broadband", xlab = "Theoretical Quantiles", ylab = "log transformed broadband")
 
 # Add a reference line
-qqline(data_2011$log_broadband, col = "steelblue", lwd = 2)
+qqline(data_2022$log_broadband, col = "steelblue", lwd = 2)
 ```
-Option 2: Square root Transform
+We see that the histogram of log transformed broadband values is also left skewed. We need to consider another transformed method
+
+##### Option 2: Square root Transform
 ``` {r message=FALSE, warning=FALSE}
-#Square root transform the broadband dataset. 
-data_2011 <- data_2011 %>%
+#Square root transform of the broadband dataset. 
+data_2022 <- data_2022 %>%
   mutate(sqrt_broadband = sqrt(broadband))
 
 #Testing the skewness of log transform broadband values
-ggplot(data_2011,aes(x=sqrt_broadband))+
+ggplot(data_2022,aes(x=sqrt_broadband))+
   geom_histogram(colour="white", fill="steelblue")+
-  labs(title="Histogram of Square root Tranformed Broadband in 2011",
+  labs(title="Square rootTranformed Broadband in 2022",
        x = "Square root Transformed Broadband",
        y = "Frequency")
 
-shapiro.test(data_2011$sqrt_broadband)
+shapiro.test(data_2022$sqrt_broadband)
 
-qqnorm(data_2011$sqrt_broadband, main = "Q-Q Plot for Square root transformed broadband", xlab = "Theoretical Quantiles", ylab = "log transformed broadband")
+qqnorm(data_2022$sqrt_broadband, main = "Q-Q Plot for Square root transformed broadband", xlab = "Theoretical Quantiles", ylab = "log transformed broadband")
 
 # Add a reference line
-qqline(data_2011$sqrt_broadband, col = "steelblue", lwd = 2)
+qqline(data_2022$sqrt_broadband, col = "steelblue", lwd = 2)
 ```
 
+The sqrt transform is preferable.
+Let's also apply this to 2011.
+
+##### Square root Transform for 2011 broadband
 ``` {r message=FALSE, warning=FALSE}
-#Create a scatter plot of square root broadband vs hdi of 2011
-ggplot(data_2011, aes(x = sqrt_broadband, y = hdi)) +
+#Sqaure root transformed the broadband
+data_2011 <- data_2011 %>%
+  filter(broadband != 0) %>% 
+  mutate(sqrt_broadband = sqrt(broadband))
+```
+
+
+#### Distribution of Gross Domestic Product (2022)
+``` {r message=FALSE, warning=FALSE}
+#Test the skewness and distribution of the data
+#Histogram of GDP in 2022. 
+ggplot(data_2022,aes(x=gdp))+
+  geom_histogram(colour="white", fill="steelblue")+
+  labs(title="Gross Domestic Product (GDP) in 2022",
+       x = "GDP",
+       y = "Frequency")
+```
+This data is right skewed
+
+##### Log Transform for 2022 gdp
+``` {r message=FALSE, warning=FALSE}
+
+#log transform GDP
+data_2022 <- data_2022 %>%
+  mutate(log_gdp = log(gdp))
+
+
+#Testing the skewness of log transform broadband values
+ggplot(data_2022,aes(x=log_gdp))+
+  geom_histogram(colour="white", fill="steelblue")+
+  labs(title="Log GDP in 2022",
+       x = "Log Transformed Broadband",
+       y = "Frequency")
+
+shapiro.test(data_2022$log_gdp)
+
+qqnorm(data_2022$log_gdp, main = "Q-Q Plot for log transformed GDP in 2022", xlab = "Theoretical Quantiles", ylab = "log transformed GDP")
+
+# Add a reference line
+qqline(data_2022$log_gdp, col = "steelblue", lwd = 2)
+```
+
+### Standardization
+To calculate z-scores, we need the mean and standard deviations. These values are joined to our long format table  
+```{r}
+
+# Creating vectors with the z-scores for each of the predictors
+v_means_2011 <- data_2011 %>% summarize(across(-country, mean))
+v_sd_2011 <- data_2011 %>% summarize(across(-country, sd))
+
+v_means_2022 <- data_2022 %>% summarize(across(-country, mean))
+v_sd_2022 <- data_2022 %>% summarize(across(-country, sd))
+
+# Create a dataframe with the means and sds
+df_standards_2011 <-  data.frame(key=names(v_means_2011),attribute_means=unlist(v_means_2011),attribute_sd=unlist(v_sd_2011))
+df_standards_2022 <-  data.frame(key=names(v_means_2022),attribute_means=unlist(v_means_2022),attribute_sd=unlist(v_sd_2022))
+
+# Make longer versions of the 2011 and 2022 dataframes
+data_2011_longer <- pivot_longer(data_2011,
+                                 cols = c("broadband","hdi","gdp","sqrt_broadband"),
+                                 names_to = "key", 
+                                 values_to= "values")
+
+data_2022_longer <- pivot_longer(data_2022,
+                                 cols = c("broadband","hdi","gdp","log_broadband","sqrt_broadband","log_gdp"),
+                                 names_to = "key", 
+                                 values_to= "values")
+
+# Joining the two dataframes
+data_2011_longer <- data_2011_longer %>% inner_join(df_standards_2011, by = "key")
+data_2022_longer <- data_2022_longer %>% inner_join(df_standards_2022, by = "key")
+
+# Create the z-scores (value-mean)/sd
+data_2011_longer <- data_2011_longer %>% mutate(z_score = (values -attribute_means)/attribute_sd)
+data_2022_longer <- data_2022_longer %>% mutate(z_score = (values -attribute_means)/attribute_sd)
+
+# Pivot back to make this easier to work with
+data_2011_standardized <- data_2011_longer %>% 
+  dplyr::select(country,key,z_score) %>% 
+  pivot_wider(., id_cols="country", names_from ="key", values_from = "z_score")
+
+data_2022_standardized <- data_2022_longer %>% 
+  dplyr::select(country,key,z_score) %>% 
+  pivot_wider(., id_cols="country", names_from ="key", values_from = "z_score")
+
+```
+
+
+
+# Question 1 
+What is the relationship between HDI and broadband subscriptions, based on the latest available data, which is 2022.
+
+
+## Descriptives and EDA
+Let's peek at means and standard deviations.
+```{r}
+skim(data_2011_standardized)
+```
+
+### Correlation matrix
+Let's look at the correlations between the independent variables. We want there to be low correlations for no multicollinerity.
+```{r fig.width=5, fig.height=5}
+# the corrplot function requires a vector of correlations
+
+df_wider.cor = cor(data_2022_standardized[, 2:6])
+
+# creating a lower corrplot with numbers
+corrplot(df_wider.cor,
+               type="lower",
+               method = "number",
+               tl.pos = "lt",
+               diag = TRUE,
+               tl.col = "black")
+
+```
+
+### Plots
+
+#### Scotterplot
+``` {r message=FALSE, warning=FALSE}
+#Create a scatter plot of square root broadband vs hdi of 2022
+ggplot(data_2022_standardized, aes(x = sqrt_broadband, y = hdi)) +
   geom_point(color = "steelblue") +                                               # Add scatter points
   geom_smooth(method = "lm", color = "darkred", linetype = "solid") + # Adds a linear regression line
-  labs(title = "Scatter Plot with Line of Best Fit of Square root Broadband vs HDI",
+  labs(title = "Scatter Plot with Line of Best Fit of Square root Broadband vs HDI in 2022",
        x = "Square root Broadband Subscription per 100",
        y = "HDI")
 ```
 
 ``` {r message=FALSE, warning=FALSE}
-#Create a model for 2011 data
-model_2011 <- lm(hdi ~ sqrt_broadband, data=data_2011)
-summary(model_2011)
-```
-
-#Question 2: Finding the outliers countries in 2023
-```{r message=FALSE, warning=FALSE}
-data_2023 <- na.omit(data_2023) %>%
-  mutate(
-    fitted_hdi = fitted(model_2023,),
-    residuals = resid(model_2023),
-    std_resid = rstandard(model_2023)
-  )
-
-outliers <- data_2023 %>%
-  filter(abs(std_resid) > 3)
-
-outliers
-```
-
-#Question 3: looking at GDP as the controlling factor
-#Testing the skewness of GDP
-```{r}
-#histogram of GDP in 2023
-ggplot(data_2023,aes(x=gdp))+
-  geom_histogram(colour="white", fill="steelblue")+
-  labs(title="Histogram of GDP in 2023",
-       x = "GDP",
-       y = "Frequency")
-
-# Box plot of GDP in 2023
-ggplot(data_2023, aes(y=gdp)) + 
-  geom_boxplot() + 
-  labs(title = "Box plot of GDP in 2023",
-       y="Count")
-
-```
-The GDP dataset is right skewed and need to be transformed. Option 1: Log transform
-```{r}
-data_2023 <- data_2023 %>%
-  filter(broadband != 0) %>%
-  mutate(log_gdp = log(gdp))
-
-#Testing the skewness of log transform broadband values
-ggplot(data_2023,aes(x=log_gdp))+
-  geom_histogram(colour="white", fill="steelblue")+
-  labs(title="Histogram of Log Tranformed GDP in 2023",
-       x = "Log Transformed GDP",
-       y = "Frequency")
-
-shapiro.test(data_2023$log_gdp)
-
-qqnorm(data_2023$log_gdp, main = "Q-Q Plot for log transformed GDP", xlab = "Theoretical Quantiles", ylab = "log transformed GDP")
-
-# Add a reference line
-qqline(data_2023$log_gdp, col = "steelblue", lwd = 2)
-```
-Option 2: Square root transform gdp
-```{r}
-data_2023 <- data_2023 %>%
-  filter(broadband != 0) %>%
-  mutate(sqrt_gdp = sqrt(gdp))
-
-#Testing the skewness of log transform broadband values
-ggplot(data_2023,aes(x=sqrt_gdp))+
-  geom_histogram(colour="white", fill="steelblue")+
-  labs(title="Histogram of Square root Tranformed GDP in 2023",
-       x = "Square root Transformed GDP",
-       y = "Frequency")
-
-shapiro.test(data_2023$sqrt_gdp)
-
-qqnorm(data_2023$sqrt_gdp, main = "Q-Q Plot for Square root transformed GDP", xlab = "Theoretical Quantiles", ylab = "Square root transformed GDP")
-
-# Add a reference line
-qqline(data_2023$sqrt_gdp, col = "steelblue", lwd = 2)
-```
-#Create a scatter plot of log GDP vs hdi of 2023
-```{r}
-ggplot(data_2023, aes(x = log_gdp, y = hdi)) +
-  geom_point(color = "steelblue") +                                               # Add scatter points
-  geom_smooth(method = "lm", color = "darkred", linetype = "solid") + # Adds a linear regression line
-  labs(title = "Scatter Plot with Line of Best Fit of Log GDP vs HDI",
-       x = "Log GDP",
-       y = "HDI")
-```
-#Create a multi regression with gdp as the control variable
-```{r}
-multi_reg <- lm (hdi ~ sqrt_broadband + log_gdp, data = data_2023)
-
+#Create a model for 2022 data
+multi_reg <- lm (hdi ~ sqrt_broadband + log_gdp, data = data_2022_standardized)
 summary(multi_reg)
 ```
-#Checking assumptions
+## Checking assumptions
+
+### Lack of Multicollinearity
+```{r}
+vif(multi_reg)
+```
+The variance inflation factors are 4.01 for sqrt_broadband and 4.01 for log_gdp. This indicates that there is not a strong linear relationship between these factors.  
+
+### Independence
+```{r}
+dwtest(multi_reg)
+```
+?? 
+
+### Normaility of residuals
 ```{r}
 plot(multi_reg, which = 1)
-
-dwtest(multi_reg)
 
 res_model <- residuals(multi_reg)
 shapiro.test(res_model)
@@ -434,5 +519,101 @@ plot(pred_model, res_model,
      col = "steelblue")
 abline(h = 0, col = "red", lwd = 2)
 
-vif(multi_reg)
 ```
+
+#### Homoscedascity
+Next, let's look for the independence of the residuals.
+```{r}
+res_model <- residuals(multi_reg)
+shapiro.test(res_model)
+plot(multi_reg, which = 2)
+```
+
+# Question 2
+Are there countries that significantly deviate from this relationship between HDI and broadband subscription rate?
+
+## Outlier countries in 2022
+```{r message=FALSE, warning=FALSE}
+data_2022_standardized <- na.omit(data_2022_standardized) %>%
+  mutate(
+    fitted_hdi = fitted(model_2022,),
+    residuals = resid(model_2022),
+    std_resid = rstandard(model_2022)
+  )
+
+outliers_2022 <- data_2022_standardized %>%
+  filter(abs(std_resid) > 3)
+
+outliers_2022
+```
+Our outliers in 2022 are Kuwait and Somalia
+
+## Outlier countries in 2011
+```{r message=FALSE, warning=FALSE}
+data_2011_standardized <- na.omit(data_2011_standardized) %>%
+  mutate(
+    fitted_hdi = fitted(model_2011),
+    residuals = resid(model_2011),
+    std_resid = rstandard(model_2011)
+  )
+
+outliers_2011 <- data_2011_standardized %>%
+  filter(abs(std_resid) > 3)
+
+outliers_2011
+```
+Our outlier is 2011 is Cuba
+
+# Question 3
+How has broadband access by country changed between 2011, when the UN declaration was announced, and 2022? 
+
+## Descriptives and EDA
+```{r}
+skim(merged_data)
+```
+
+### Plots
+Now let's look at how the distributions compare between 2011 and 2022.
+```{r}
+# Scatterplots by variable - using non-transformed data
+
+merged_data  %>% filter(year==c('2011','2022')) %>% ggplot(aes(y=broadband)) +
+    geom_boxplot() +
+    facet_wrap(~year, scales = 'fixed', axis.labels= 'all_y') 
+```
+
+
+## T-test
+Let's test whether there is significant differences between broadband subscriptions between our reference year and 2022.
+```{r}
+result <- t.test(data_2022$broadband,data_2011$broadband)
+result
+```
+We can see from the t-test that we can reject the null hypothesis that broadband adoption is the same between years.  
+
+### Confidence interval
+We will now visualize our confidence interval.
+```{r}
+bb_long <- bind_rows(data_2011, data_2022) %>%
+  mutate(
+    year = factor(year, levels = c("2022", "2011"))
+  )
+
+null_dist <- bb_long %>%
+  specify(broadband ~ year) %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in means", order = c("2022", "2011"))
+
+ci <- null_dist %>%
+  get_ci()
+ci
+
+null_dist %>%
+  visualize() +
+  shade_ci(endpoints = ci)
+```
+
+
+
+## References
