@@ -161,7 +161,7 @@ Let's peek at the rows with missing values for 2022
 broadband_clean %>% filter(is.na(`2022`))
 ```
 
-For each, let's use the nearest previous year with a value as an approximation
+For each, let's forward fill with the nearest previous year as an approximation
 ```{r}
 broadband_clean['Niger','2022'] <- broadband_clean['Niger','2020']
 
@@ -479,7 +479,7 @@ corrplot(df_wider.cor,
 ggplot(data_2022_standardized, aes(x = sqrt_broadband, y = hdi)) +
   geom_point(color = "steelblue") +                                               # Add scatter points
   geom_smooth(method = "lm", color = "darkred", linetype = "solid") + # Adds a linear regression line
-  labs(title = "Scatter Plot with Line of Best Fit of Square root Broadband vs HDI in 2022",
+  labs(title = "Square root Broadband vs HDI in 2022",
        x = "Square root Broadband Subscription per 100",
        y = "HDI")
 ```
@@ -643,10 +643,10 @@ Let's look at the correlations between broadband subscriptions and HDI.
 
 ```{r fig.width=3, fig.height=3}
 
-cor.test(data_2022_standardized$hdi, data_2022_standardized$broadband)
+cor.test(data_2022_standardized$hdi, data_2022_standardized$sqrt_broadband)
 
 ```
 
-There is a significant relationship between HDI and broadband subscription rate, r=.85, p<.05.
+There is a significant relationship between HDI and broadband subscription rate, r=.90, p<.05.
 
 ## References
