@@ -10,6 +10,7 @@ output:
   pdf_document:
     toc: true
     toc_depth: '3'
+    latex_engine: xelatex
 ---
 
 # 1. Motivation {#sec-motivation}
@@ -39,12 +40,12 @@ knitr::opts_chunk$set(tidy=TRUE, tidy.opts=list(width.cutoff=20))
 library(tidyverse)
 library(janitor)
 library(broom)
-library(car)
 library(lmtest)
 library(dplyr)
 library(infer)
 library(corrplot)
 library(kableExtra)
+library(skimr)
 ```
 
 We are using three files from the Gapminder dataset: \
@@ -216,12 +217,15 @@ list_transpose(as.list((gdp_missing_values)))
 
 ```
 
-It might be prudent to not include the year 2023 in our analysis as it has a lot of missing values. In any case, we will remove the rows displayed above with empty values.
+Not dropping any at this point
 
 ``` {r echo=FALSE, message=FALSE, warning=FALSE}
-hdi_clean <- hdi %>% drop_na()
-broadband_clean <- broadband %>% drop_na
-gdp_clean <- gdp %>% drop_na
+hdi_clean <- hdi
+  # %>% drop_na()
+broadband_clean <- broadband
+  # %>% drop_na
+gdp_clean <- gdp
+  # %>% drop_na
 ```
 
 
@@ -232,7 +236,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. In egestas lobortis por
 ## 5.2. Data Distribution
 ### 5.2.1 Distribution of HDI
 ``` {r echo=FALSE, message=FALSE, warning=FALSE, results=TRUE}
-hdi_numeric <- hdi %>%
+hdi_numeric <- hdi_clean %>%
   select(where(is.numeric))
 
 hdi_long <- hdi_numeric %>%
@@ -248,13 +252,14 @@ hdi_long %>%
   facet_wrap(~ variable, scales = "free", ncol = 4) +
   theme_bw()
 
+skim(hdi_clean)
 ```
 
 Comment on the distribution
 
 ### 5.2.2 Distribution of Broadband
 ``` {r echo=FALSE, message=FALSE, warning=FALSE, results=TRUE}
-broadband_numeric <- broadband %>%
+broadband_numeric <- broadband_clean %>%
   select(where(is.numeric))
 
 broadband_long <- broadband_numeric %>%
@@ -270,13 +275,14 @@ broadband_long %>%
   facet_wrap(~ variable, scales = "free", ncol = 4) +
   theme_bw()
 
+skim(broadband_clean)
 ```
 
 Comment on the distribution
 
 ### 5.2.3 Distribution of GDP
 ``` {r echo=FALSE, message=FALSE, warning=FALSE, results=TRUE}
-gdp_numeric <- gdp %>%
+gdp_numeric <- gdp_clean %>%
   select(where(is.numeric))
 
 gdp_long <- gdp_numeric %>%
@@ -292,6 +298,7 @@ gdp_long %>%
   facet_wrap(~ variable, scales = "free", ncol = 4) +
   theme_bw()
 
+skim(gdp_clean)
 ```
 
 Comment on the distribution
