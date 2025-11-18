@@ -608,21 +608,21 @@ Now let's look at how the distributions compare between 2011 and 2022.
 ```{r}
 # Scatterplots by variable - using non-transformed data
 
-merged_data  %>% filter(year==c('2011','2022')) %>% ggplot(aes(y=broadband)) +
+merged_data  %>% filter(year %in% c('2011','2022')) %>% ggplot(aes(y=broadband)) +
     geom_boxplot() +
-    facet_wrap(~year, scales = 'fixed', axis.labels= 'all_y') 
+    facet_wrap(~year, scales = 'fixed') 
 ```
+This data is skewed and has unequal variances.
 
-
-## T-test
-Let's test whether there is significant differences between broadband subscriptions between our reference year and 2022.
+## Wilcoxin Rank-Sum Test
+Let's test whether there is significant differences between broadband subscriptions between our reference year and 2022. We'll use a non-parametric test because our skewed data doesn't meet the conditions for a t-test.
 ```{r}
 result <- wilcox.test(data_2022$broadband,data_2011$broadband)
 result
 ```
 
 
-### Confidence interval
+### ??? Remove???Confidence interval
 We will now visualize our confidence interval.
 ```{r}
 bb_long <- bind_rows(data_2011, data_2022) %>%
@@ -644,7 +644,7 @@ null_dist %>%
   visualize() +
   shade_ci(endpoints = ci)
 ```
-On average, countries had greater broadband subscription rates in 2022 (M = 16.24, SE=15.23) than in 2011 (M=9.61, SE=11.31).  This difference is significant t = 4.73, p< 0.05.
+On average, countries had greater broadband subscription rates in 2022 (M = 16.24, SE=15.23) than in 2011 (M=9.61, SE=11.31).  This difference is significant W=20910, p< 0.05.
 
 
 # Question 4 
