@@ -395,6 +395,15 @@ qqnorm(data_2022$log_gdp, main = "Q-Q Plot for log transformed GDP in 2022", xla
 qqline(data_2022$log_gdp, col = "steelblue", lwd = 2)
 ```
 
+##### Log Transform for 2011 gdp
+``` {r message=FALSE, warning=FALSE}
+
+#log transform GDP
+data_2011 <- data_2011 %>%
+  mutate(log_gdp = log(gdp))
+
+```
+
 ### Standardization
 The model should use the z-scores rather than the values of the predictors because they all were measured using different scales. (Field,2012)
 
@@ -414,7 +423,7 @@ df_standards_2022 <-  data.frame(key=names(v_means_2022),attribute_means=unlist(
 
 # Make longer versions of the 2011 and 2022 dataframes
 data_2011_longer <- pivot_longer(data_2011,
-                                 cols = c("broadband","hdi","gdp","sqrt_broadband"),
+                                 cols = c("broadband","hdi","gdp","sqrt_broadband","log_gdp"),
                                  names_to = "key", 
                                  values_to= "values")
 
@@ -488,6 +497,9 @@ ggplot(data_2022_standardized, aes(x = sqrt_broadband, y = hdi)) +
 #Create a model for 2022 data
 multi_reg <- lm (hdi ~ sqrt_broadband + log_gdp, data = data_2022_standardized)
 summary(multi_reg)
+
+multi_reg_2011 <- lm (hdi ~ sqrt_broadband + log_gdp, data = data_2011_standardized)
+
 ```
 ## Checking assumptions
 
@@ -552,9 +564,9 @@ Are there countries that significantly deviate from this relationship between HD
 ```{r message=FALSE, warning=FALSE}
 data_2022_standardized <- na.omit(data_2022_standardized) %>%
   mutate(
-    fitted_hdi = fitted(model_2022,),
-    residuals = resid(model_2022),
-    std_resid = rstandard(model_2022)
+    fitted_hdi = fitted(multi_reg),
+    residuals = resid(multi_reg),
+    std_resid = rstandard(multi_reg)
   )
 
 outliers_2022 <- data_2022_standardized %>%
@@ -568,9 +580,9 @@ Our outliers in 2022 are Kuwait and Somalia
 ```{r message=FALSE, warning=FALSE}
 data_2011_standardized <- na.omit(data_2011_standardized) %>%
   mutate(
-    fitted_hdi = fitted(model_2011),
-    residuals = resid(model_2011),
-    std_resid = rstandard(model_2011)
+    fitted_hdi = fitted(multi_reg_2011),
+    residuals = resid(multi_reg_2011),
+    std_resid = rstandard(multi_reg_2011)
   )
 
 outliers_2011 <- data_2011_standardized %>%
@@ -605,7 +617,7 @@ merged_data  %>% filter(year==c('2011','2022')) %>% ggplot(aes(y=broadband)) +
 ## T-test
 Let's test whether there is significant differences between broadband subscriptions between our reference year and 2022.
 ```{r}
-result <- t.test(data_2022$broadband,data_2011$broadband)
+result <- wilcox.test(data_2022$broadband,data_2011$broadband)
 result
 ```
 
@@ -619,7 +631,7 @@ bb_long <- bind_rows(data_2011, data_2022) %>%
   )
 
 null_dist <- bb_long %>%
-  specify(broadband ~ year) %>%
+  specify(sqrt_broadband ~ year) %>%
   hypothesize(null = "independence") %>%
   generate(reps = 1000, type = "permute") %>%
   calculate(stat = "diff in means", order = c("2022", "2011"))
@@ -643,7 +655,7 @@ Let's look at the correlations between broadband subscriptions and HDI.
 
 ```{r fig.width=3, fig.height=3}
 
-cor.test(data_2022_standardized$hdi, data_2022_standardized$sqrt_broadband)
+cor.test(data_2022_standardized$hdi, data_2022_standardized$broadband)
 
 ```
 
