@@ -77,7 +77,7 @@ Since there are 35 columns, let's only see the first and last five columns to se
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 hdi <- clean_names(hdi) 
 head(colnames(hdi), 5)
-tail(colnames(hdi), 5)
+tail(colnames(hdi), 5) #comment here
 ```
 The year range of this dataset is 1990 - 2023. We can also see that the column names have "x" characters that need to be cleaned further.  
 \
