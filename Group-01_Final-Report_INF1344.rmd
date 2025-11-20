@@ -601,6 +601,56 @@ qqnorm(data_2022$log_gdp, main = "Q-Q Plot for log transformed GDP in 2022", xla
 qqline(data_2022$log_gdp, col = "steelblue", lwd = 2)
 ```
 
+### Distribution of GDP (2011)
+
+The distribution of GDP in 2011 is highly right-skewed, as shown by both the histogram and the box plot. There are several extreme values appear as outliers well above the upper whisker. We will need to transform the data before including it in the model. 
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
+#Test the skewness and distribution of the data
+#Histogram of GDP in 2011. 
+ggplot(data_2011,aes(x=gdp))+
+  geom_histogram(colour="white", fill="steelblue")+
+  labs(title="Gross Domestic Product (GDP) in 2011",
+       x = "GDP",
+       y = "Frequency") +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+#Boxplot for GDP in 2011
+ggplot(data_2011, aes(y=gdp)) + 
+  geom_boxplot() + 
+  labs(title = "Box plot of GDP in 2011",
+       y="Count") +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    aspect.ratio = 1.5
+  )
+```
+
+Since a log transformation was successfully applied to the 2022 GDP values, the same approach will be used for the 2011 data. After applying a log transformation, the distribution of GDP in 2011 becomes much more symmetric and closer to a normal shape. The Q–Q plot also shows most points fall closely along the theoretical normal line, indicating that the transformed data approximates normality. Overall log transformation effectively reduces skewness and makes the data more suitable for modelling.
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
+#log transform GDP
+data_2011 <- data_2011 %>%
+  mutate(log_gdp = log(gdp))
+
+
+#Testing the skewness of log transform broadband values
+ggplot(data_2011,aes(x=log_gdp))+
+  geom_histogram(colour="white", fill="steelblue")+
+  labs(title="Log GDP in 2011",
+       x = "Log Transformed Broadband",
+       y = "Frequency") +
+  theme(
+    plot.title = element_text(hjust = 0.5)
+  )
+
+shapiro.test(data_2011$log_gdp)
+
+qqnorm(data_2011$log_gdp, main = "Q-Q Plot for log transformed GDP in 2011", xlab = "Theoretical Quantiles", ylab = "log transformed GDP")
+
+# Add a reference line
+qqline(data_2011$log_gdp, col = "steelblue", lwd = 2)
+```
+
 ### Standardization
 
 We standardized our data using z-scores to ensure that all variables were equally weighted in our analysis. Standardization is the process of transforming raw values into z-scores, which express each observation relative to the mean and standard deviation of its variable. 
@@ -623,7 +673,7 @@ df_standards_2022 <-  data.frame(key=names(v_means_2022),attribute_means=unlist(
 
 # Make longer versions of the 2011 and 2022 dataframes
 data_2011_longer <- pivot_longer(data_2011,
-                                 cols = c("broadband","hdi","gdp","sqrt_broadband"),
+                                 cols = c("broadband","hdi","gdp","sqrt_broadband","log_gdp"),
                                  names_to = "key", 
                                  values_to= "values")
 
@@ -718,7 +768,7 @@ outliers_2022 <- data_2022_standardized %>%
 
 outliers_2022
 ```
-Our outliers in 2022 are Kuwait and Somalia
+Our outliers in 2022 are Kiribati and Mali
 
 # Question 3
 How has broadband access by country changed between 2011, when the UN declaration was announced, and 2022? 
@@ -776,7 +826,7 @@ ggplot(data_2011_standardized, aes(x = sqrt_broadband, y = hdi)) +
 ```
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #Create a model for 2011 data
-model_2011 <- lm(hdi ~ sqrt_broadband, data=data_2011_standardized)
+model_2011 <- lm(hdi ~ sqrt_broadband + log_gdp, data=data_2011_standardized)
 summary(model_2011)
 ```
 
