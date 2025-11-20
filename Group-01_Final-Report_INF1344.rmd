@@ -1,16 +1,26 @@
 ---
 title: "Final Report - Group 01"
-subtitle: "HDI and Broadband - Data Analysis"
-author: 'Amie Leung, Ivan Nguyen, Janna Cameron, Kaye Ann Caroningan, and Syed Hassan'
+author: "Amie Leung, Ivan Nguyen, Janna Cameron, Kaye Ann Caroningan, and Syed Hassan"
 date: "Nov 29, 2025"
-date-format: "D MM YY"
-abstract: "This report analyzes the relationship between Human Development Index (HDI) and broadband access across various countries, highlighting trends and insights from the data. Lorem ipsum dolor sit amet, consectetur adipiscing elit. In egestas lobortis porta. Phasellus tincidunt metus sed mollis imperdiet. Aliquam blandit nibh in fermentum consequat. Fusce blandit magna quis nulla ornare, non mattis enim tempor. Nulla et odio dui. Nunc ut elit venenatis, porttitor dui et, placerat tortor. Sed aliquet sodales magna, sit amet porta odio tempor in. CHANGE THIS AT THE END"
-bibliography: references.bib
 output:
+  html_document:
+    toc: true
+    toc_depth: '3'
+    df_print: paged
   pdf_document:
     toc: true
     toc_depth: '3'
     latex_engine: xelatex
+date-format: D MM YY
+abstract: This report analyzes the relationship between Human Development Index (HDI)
+  and broadband access across various countries, highlighting trends and insights
+  from the data. Lorem ipsum dolor sit amet, consectetur adipiscing elit. In egestas
+  lobortis porta. Phasellus tincidunt metus sed mollis imperdiet. Aliquam blandit
+  nibh in fermentum consequat. Fusce blandit magna quis nulla ornare, non mattis enim
+  tempor. Nulla et odio dui. Nunc ut elit venenatis, porttitor dui et, placerat tortor.
+  Sed aliquet sodales magna, sit amet porta odio tempor in. CHANGE THIS AT THE END
+bibliography: references.bib
+subtitle: "HDI and Broadband - Data Analysis"
 ---
 
 # 1. Motivation {#sec-motivation}
@@ -33,7 +43,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. In egestas lobortis por
 
 ## 3.3. Question 3
 Lorem ipsum dolor sit amet, consectetur adipiscing elit. In egestas lobortis porta. Phasellus tincidunt metus sed mollis imperdiet. Aliquam blandit nibh in fermentum consequat. Fusce blandit magna quis nulla ornare, non mattis enim tempor. Nulla et odio dui. Nunc ut elit venenatis, porttitor dui et, placerat tortor. Sed aliquet sodales magna, sit amet porta odio tempor in. CHANGE THIS OF COURSE
-
 # 4. Data {#sec-data}
 ```{r setup, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(tidy=TRUE, tidy.opts=list(width.cutoff=20))
@@ -64,7 +73,8 @@ gdp <- read.csv("data/gdp_pcap.csv")
 In this section we will clean the header names of each dataset and explore and describe the datasets one by one. 
 
 **1. Human Development Index (HDI):**
-  
+Based on data from the United Nations Development Programme website, this dataset contains the HDI scores for each country between the years 1990 and 2023. There are 193 rows and 35 columns. The data contains some missing values for certain periods.
+
 Let's explore the shape of the dataset.
 
 *Rows x Columns*
@@ -77,11 +87,12 @@ Since there are 35 columns, let's only see the first and last five columns to se
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 hdi <- clean_names(hdi) 
 head(colnames(hdi), 5)
-tail(colnames(hdi), 5) #comment here
+tail(colnames(hdi), 5)
 ```
 The year range of this dataset is 1990 - 2023. We can also see that the column names have "x" characters that need to be cleaned further.  
 \
 **2. Broadband subscribers (per 100 people):**
+This dataset contains the number of fixed broadband subscriptions per 100 people between the years 1998 and 2023. Included in this measurement are all wired connections that provide high-speed internet access (>= 256 kbits/s), covering both residential and organizational subscriptions but excluding mobile-cellular networks. There are 193 rows and 28 columns. The data contains some missing values, mainly concentrated in the earlier years. 
 
 *Rows x Columns*
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -97,6 +108,7 @@ The year range of this dataset is 1998 - 2023. Again, the column names have "x"s
  \
 
 **3. Gross Domestic Product (GDP):**
+Adjusted for inflation and cost-of-living differences, this dataset measures the value of goods and services produced per person for each country, compiling data from the early 19th century to the present year. There are 194 rows and 303 columns.
 
 *Rows x Columns*
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -111,9 +123,11 @@ tail(colnames(gdp), 5)
 
 This dataset has the most number of years ranging from 1800 - 2100. The future year values might be predicted or empty which we can analyze further when standardizing and cleaning rows. The *geo* column is also interesting as after standardizing the country names, and merging the datasets, we can also map the data if needed. 
 
+Please note: all datasets were sourced from the Gapminder repository. Data from the year 2022 coincides with the tail end of the COVID-19 pandemic; however, for the purposes of this report, we will not account for its potential impacts on GDP and HDI, particularly with regard to health.
+
 ## 4.3. Selecting the required columns
 
-Since the dataset has values from 100+ years, we will narrow them down to the most recent decade starting from 2010 to 2023. Will also clean the years by removing the 'x' character before we select the columns of interest.
+Since the dataset has values from 100+ years, we will narrow them down to the most recent decade starting from 2010 to 2023. Will also clean the years by removing the 'x' character before we select the columns of interest ("X2010" -> 2010).
 
 **HDI**
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -239,6 +253,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. In egestas lobortis por
 
 ## 5.2. Data Distribution
 ### 5.2.1. Distribution of HDI
+#SYED: Can we show the 2011 and 2022 values only?
 ```{r echo=FALSE, message=FALSE, warning=FALSE, results=TRUE}
 hdi_numeric <- hdi_clean %>%
   select(where(is.numeric))
@@ -262,6 +277,7 @@ skim(hdi_clean)
 Comment on the distribution
 
 ### 5.2.2. Distribution of Broadband
+#SYED: Can we show the 2011 and 2022 values only?
 ```{r echo=FALSE, message=FALSE, warning=FALSE, results=TRUE}
 broadband_numeric <- broadband_clean %>%
   select(where(is.numeric))
@@ -285,6 +301,7 @@ skim(broadband_clean)
 Comment on the distribution
 
 ### 5.2.3. Distribution of GDP
+#SYED: Can we show the 2011 and 2022 values only?
 ```{r echo=FALSE, message=FALSE, warning=FALSE, results=TRUE}
 gdp_numeric <- gdp_clean %>%
   select(where(is.numeric))
@@ -335,6 +352,7 @@ merged_data <- na.omit(merged_data)
 ```
 
 ### Skewness
+Although the original data spanned multiple years, this analysis focuses only on 2011 and 2022. We chose the former column as this coincides with the year that the UN declared internet access a basic human right (United Nations Human Rights Council, 2011). Although 2023 is the most recent year in our dataset, we decided to use 2022 because this year had the fewest missing values. More than 10% of the values for broadband subscriptions in 2023 (49/193) were missing.
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 #Pull the data for 2022 only
 data_2022 <- merged_data %>% filter(year==2022)
@@ -345,8 +363,11 @@ data_2022 <- merged_data %>% filter(year==2022)
 data_2011 <- merged_data %>% filter(year==2011)
 ```
 
+Before modelling, we conducted an exploratory data analysis on the 2011 and 2022 distributions of HDI, broadband subscriptions, and GDP using histograms and boxplots to assess skewness and normality.
 
 #### Distribution of Human Development Index (2022)
+
+The 2022 HDI histogram and boxplot below indicate a mild left skew. However, because the skewness is not substantial, we chose not to transform the data.
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #Test the skewness and distribution of the data
 #Histogram of HDI in 2022. Histogram show that the HDI of 2022 is mildy left skewed
@@ -373,6 +394,8 @@ theme(
 ```
 
 #### Distribution of Human Development Index (2011)
+
+The 2011 HDI histogram and boxplot also show a mild left skew. Similar to the 2022 HDI data, the skewness is not substantial, therefore we chose not to transform the data.
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #Test the skewness and distribution of the data
 #Histogram of HDI in 2011. 
@@ -386,8 +409,6 @@ ggplot(data_2011,aes(x=hdi))+
   )
 ```
 
-This histogram shows that the HDI of 2011 is mildy left skewed.
-
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 # Box plot of HDI in 2011
 ggplot(data_2011, aes(y=hdi)) + 
@@ -400,8 +421,9 @@ ggplot(data_2011, aes(y=hdi)) +
   )
 ```
 
-
 #### Distribution of Broadband (2022)
+
+The 2022 broadband subscription histogram and boxplot show a strong right skew, indicating the need to transform this variable before running the linear regression model.
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #Histogram of broadband in 2022. 
 ggplot(data_2022,aes(x=broadband))+
@@ -413,8 +435,6 @@ ggplot(data_2022,aes(x=broadband))+
     plot.title = element_text(hjust = 0.5)
   )
 ```
-
-The histogram shows that the broadband data is right skewed.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 # Box plot of broadband in 2022
@@ -428,9 +448,9 @@ ggplot(data_2022, aes(y=broadband)) +
   )
 ```
 
-We need to transform the broadband dataset. 
-
 #### Distribution of Broadband (2011)
+
+The 2011 broadband subscription data is also strongly right skewed based on the histogram and boxplot below. Therefore, we also need to transform this variable before including them in our model.
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #Histogram of broadband in 2011. 
 ggplot(data_2022,aes(x=broadband))+
@@ -442,8 +462,6 @@ ggplot(data_2022,aes(x=broadband))+
     plot.title = element_text(hjust = 0.5)
   )
 ```
-
-The histogram shows that the broadband data is right skewed.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 # Box plot of broadband in 2011
@@ -457,9 +475,12 @@ ggplot(data_2011, aes(y=broadband)) +
   )
 ```
 
-We need to transform the broadband dataset. 
-
 ##### Option 1: Log Transform
+
+To address the severe right skew in the 2022 broadband subscription values, we applied a log transformation. First, all countries with a broadband value of zero were removed, as the logarithm of zero is undefined. We then created a new column, log_broadband, by taking the natural log of the broadband subscription values in the data set.
+
+After the transformation, we visualized the distribution of log_broadband using a histogram and Quantile - Quantile (Q-Q) plot to assess whether the skewness had improved. However, the histogram and Q-Q plot indicate that the log transformation did not adequately normalize the data.
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #log transformed the broadband
 data_2022 <- data_2022 %>%
@@ -483,9 +504,11 @@ qqnorm(data_2022$log_broadband, main = "Q-Q Plot for log transformed broadband",
 # Add a reference line
 qqline(data_2022$log_broadband, col = "steelblue", lwd = 2)
 ```
-We see that the histogram of log transformed broadband values is also left skewed. We need to consider another transformed method
+The histogram shows that the log-transformed broadband values in 2022 is left-skewed. Furthermore, the S-shaped curve on the Q-Q plot provides further evidence that the log transformed data do not appear to have a normal distribution.
 
 ##### Option 2: Square root Transform
+
+Because the log transformation did not sufficiently improve normality, we then consider a square root transformation instead. We created another column, sqrt_broadband, by taking the square root of the broadband subscription values in the 2022 dataset. After that, we created the histogram and Q-Q plot to visualize the distribution, which show a noticeable improvement in symmetry compared to both the original and log-transformed values
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #Square root transform of the broadband dataset. 
 data_2022 <- data_2022 %>%
@@ -509,12 +532,16 @@ qqnorm(data_2022$sqrt_broadband, main = "Q-Q Plot for Square root transformed br
 qqline(data_2022$sqrt_broadband, col = "steelblue", lwd = 2)
 ```
 
-The sqrt transform is preferable.
-Let's also apply this to 2011.
+The histogram of the square root-transformed broadband values appears more evenly distributed across the range. Besides that, the Q-Q plot also confirms that the square root transformation brings the data closer to normality, where the points closely follow the theoretical normal line, indicating good alignment with a normal distribution.
+
+Overall, these results make square root transformation a more appropriate approach for the 2022 broadband subscription variable.
 
 ##### Square root Transform for 2011 broadband
+
+Because we applied a square-root transformation to the 2022 broadband subscription data, we can apply the same transformation to the 2011 broadband values for consistency. The histogram and Q-Q plot show that the square-root transformation effectively reduces skewness and moves the 2011 broadband subscription data closer to a normal distribution.
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
-#Sqaure root transformed the broadband
+#Square root transformed the broadband
 data_2011 <- data_2011 %>%
   filter(broadband != 0) %>% 
   mutate(sqrt_broadband = sqrt(broadband))
@@ -522,6 +549,8 @@ data_2011 <- data_2011 %>%
 
 
 #### Distribution of Gross Domestic Product (2022)
+
+GDP values in 2022 shows a highly skewed distribution as shown in the histogram and boxplot below. The box plot also shows numerous statistical outliers. This suggests that GDP values in 2022 will need to be transformed before including in the regression model.
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #Test the skewness and distribution of the data
 #Histogram of GDP in 2022. 
@@ -533,10 +562,21 @@ ggplot(data_2022,aes(x=gdp))+
   theme(
     plot.title = element_text(hjust = 0.5)
   )
+#Boxplot for GDP in 2022
+ggplot(data_2022, aes(y=gdp)) + 
+  geom_boxplot() + 
+  labs(title = "Box plot of GDP in 2022",
+       y="Count") +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    aspect.ratio = 1.5
+  )
 ```
-This data is right skewed
 
-##### Log Transform for 2022 gdp
+##### Log Transform for 2022 GDP
+
+After applying a log transformation to 2022 GDP values, the distribution becomes more symmetric and approximately normal. The histogram indicates reduced skewness compared to the original data. The Q-Q plot confirms this with most points falling closely along the theoretical normal line. Overall, the log transformation is effective in improving the suitability of GDP for the regression modelling.
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #log transform GDP
 data_2022 <- data_2022 %>%
@@ -562,7 +602,13 @@ qqline(data_2022$log_gdp, col = "steelblue", lwd = 2)
 ```
 
 ### Standardization
-To calculate z-scores, we need the mean and standard deviations. These values are joined to our long format table  
+
+We standardized our data using z-scores to ensure that all variables were equally weighted in our analysis. Standardization is the process of transforming raw values into z-scores, which express each observation relative to the mean and standard deviation of its variable. 
+
+For each year (2011 and 2022), we calculated the mean and standard deviation of each variable. Z-scores were computed using the formula z= (x-μ)/σ, where x is the observation value, μ is the mean, and σ is the standard deviation of the variable.
+
+This transformation produced standardized variables with a mean of 0 and standard deviation of 1, allowing for comparisons across our three variables HDI, Broadband access, and GDP.
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 # Creating vectors with the z-scores for each of the predictors
 v_means_2011 <- data_2011 %>% summarize(across(-country, mean))
@@ -636,13 +682,13 @@ corrplot(df_wider.cor,
 
 ### Plots
 
-#### Scotterplot
+#### Scatterplot
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #Create a scatter plot of square root broadband vs hdi of 2022
 ggplot(data_2022_standardized, aes(x = sqrt_broadband, y = hdi)) +
   geom_point(color = "steelblue") +                                               
   geom_smooth(method = "lm", color = "darkred", linetype = "solid") + 
-  labs(title = "Scatter Plot with Line of Best Fit of Square root Broadband vs HDI in 2022",
+  labs(title = "Scatter Plot with Best Fitted Line of Square root Broadband vs HDI in 2022",
        x = "Square root Broadband Subscription per 100",
        y = "HDI") +
   theme(
@@ -652,7 +698,7 @@ ggplot(data_2022_standardized, aes(x = sqrt_broadband, y = hdi)) +
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #Create a model for 2022 data
-model_2022 <- lm(hdi ~ sqrt_broadband, data=data_2022_standardized)
+model_2022 <- lm(hdi ~ sqrt_broadband + log_gdp, data=data_2022_standardized)
 summary(model_2022)
 ```
 
@@ -675,7 +721,7 @@ outliers_2022
 Our outliers in 2022 are Kuwait and Somalia
 
 # Question 3
-How has broadband access by country changed between 2011, when the UN declaration was announced, and 2023? 
+How has broadband access by country changed between 2011, when the UN declaration was announced, and 2022? 
 
 ## Descriptives and EDA
 
