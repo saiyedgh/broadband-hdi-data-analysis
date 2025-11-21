@@ -3,10 +3,6 @@ title: "Final Report - Group 01"
 author: "Amie Leung, Ivan Nguyen, Janna Cameron, Kaye Ann Caroningan, and Syed Hassan"
 date: "Nov 29, 2025"
 output:
-  html_document:
-    toc: true
-    toc_depth: '3'
-    df_print: paged
   pdf_document:
     toc: true
     toc_depth: '3'
@@ -748,7 +744,7 @@ ggplot(data_2022_standardized, aes(x = sqrt_broadband, y = hdi)) +
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #Create a model for 2022 data
-model_2022 <- lm(hdi ~ sqrt_broadband + log_gdp, data=data_2022_standardized)
+model_2022 <- lm(hdi ~ sqrt_broadband + log_gdp, data = data_2022_standardized)
 summary(model_2022)
 ```
 
@@ -786,6 +782,7 @@ merged_data  %>% filter(year==c('2011','2022')) %>% ggplot(aes(y=broadband)) +
     facet_wrap(~year, scales = 'free', axis.labels= 'all_y') 
 ```
 
+
 ## T-test
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
@@ -811,6 +808,38 @@ null_dist %>%
   visualize() +
   shade_ci(endpoints = ci)
 ```
+
+## Wilcoxin-test
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
+result <- wilcox.test(data_2011$broadband, data_2022$broadband)
+result
+result$conf.int
+
+bb_long <- bind_rows(data_2011, data_2022) %>%
+  mutate(
+    year = factor(year, levels = c("2011", "2022"))
+  )
+
+
+null_dist <- bb_long %>%
+  specify(broadband ~ year) %>%
+  hypothesize(null = "independence") %>%
+  generate(reps = 1000, type = "permute") %>%
+  calculate(stat = "diff in medians", order = c("2022", "2011"))
+
+
+ci <- null_dist %>%
+  get_ci()
+ci
+
+
+null_dist %>%
+  visualize() +
+  shade_ci(endpoints = ci)
+
+```
+
 #### Scatterplot
 ```{r echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=4, fig.align='center'}
 #Create a scatter plot of square root broadband vs hdi of 2011
